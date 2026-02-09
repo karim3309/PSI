@@ -5,7 +5,9 @@ namespace TourneeFutee
     public class Matrix
     {
         // TODO : ajouter tous les attributs que vous jugerez pertinents 
-        
+        public int nbColums; 
+        public int nbRows;
+        public float defaultvalue; 
 
         /* Crée une matrice de dimensions `nbRows` x `nbColums`.
          * Toutes les cases de cette matrice sont remplies avec `defaultValue`.
@@ -13,7 +15,14 @@ namespace TourneeFutee
          */
         public Matrix(int nbRows = 0, int nbColumns = 0, float defaultValue = 0)
         {
-             
+            this.nbRows= nbRows; 
+            this.nbColums= nbColumns;
+            this.defaultvalue = defaultValue;
+            if(nbRows == 0 || nbColumns == 0)
+            {
+                
+            }
+           
         }
 
         // Propriété : valeur par défaut utilisée pour remplir les nouvelles cases
