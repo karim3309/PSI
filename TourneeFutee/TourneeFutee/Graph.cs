@@ -4,6 +4,12 @@
     {
 
         // TODO : ajouter tous les attributs que vous jugerez pertinents 
+        private Dictionary<string, int> vertexIndex;
+        private Dictionary<string, float> vertexValues;
+        private Matrix matriceAdj;
+
+        private bool directed;
+        private float noEdgeValue;
 
 
         // --- Construction du graphe ---
@@ -12,7 +18,13 @@
         // La valeur `noEdgeValue` est le poids modélisant l'absence d'un arc (0 par défaut)
         public Graph(bool directed, float noEdgeValue = 0)
         {
-            // TODO : implémenter
+            this.directed = directed;
+            this.noEdgeValue = noEdgeValue;
+
+             vertexIndex = new Dictionary<string,int>();
+             vertexValues = new Dictionary<string,float>();
+             matriceAdj = new Matrix(0,0,noEdgeValue);
+
         }
 
 
@@ -22,7 +34,7 @@
         // Lecture seule
         public int Order
         {
-            get;    // TODO : implémenter
+            get { return this.Order; }   // TODO : implémenter
                     // pas de set
         }
 
@@ -30,7 +42,7 @@
         // Lecture seule
         public bool Directed
         {
-            get;    // TODO : implémenter
+            get { return Directed;  }    // TODO : implémenter
                     // pas de set
         }
 
