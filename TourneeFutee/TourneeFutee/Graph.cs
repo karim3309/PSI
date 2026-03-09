@@ -69,7 +69,10 @@
 
         public void SetVertexValue(string name, float value)
         {
-            
+            if (!vertexValues.ContainsKey(name))
+                throw new ArgumentException();
+            vertexValues[name] = value;
+
         }
 
         public List<string> GetNeighbors(string vertexName)
