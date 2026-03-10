@@ -123,7 +123,7 @@ namespace TourneeFutee
         {
             if (i < 0 || i >= NbRows || j < 0 || j >= NbColumns)
             {
-
+                throw new ArgumentOutOfRangeException();
             }
             
 
