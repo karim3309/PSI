@@ -10,7 +10,13 @@
         // Coût total de la tournée
         public float Cost
         {
-            get;    // TODO : implémenter
+            get
+            {
+                float total = 0f;
+                foreach (var seg in _segments)
+                    total += seg.cost;
+                return total;
+            }
         }
 
         // Nombre de trajets dans la tournée
