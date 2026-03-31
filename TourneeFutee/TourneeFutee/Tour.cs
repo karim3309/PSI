@@ -4,7 +4,7 @@
     public class Tour
     {
         // TODO : ajouter tous les attributs que vous jugerez pertinents 
-
+        private List<(string source, string destination, float cost)> _segments = new();
         // propriétés
 
         // Coût total de la tournée
