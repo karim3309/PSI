@@ -22,14 +22,19 @@
         // Nombre de trajets dans la tournée
         public int NbSegments
         {
-            get;    // TODO : implémenter
+            get { return _segments.Count; }    // TODO : implémenter
         }
 
 
         // Renvoie vrai si la tournée contient le trajet `source`->`destination`
         public bool ContainsSegment((string source, string destination) segment)
         {
-            return false;   // TODO : implémenter 
+            foreach (var seg in _segments)
+                if (seg.source == segment.source && seg.destination == segment.destination)
+                { 
+                    return true;
+                }
+            return false;   
         }
 
 
