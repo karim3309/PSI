@@ -47,6 +47,7 @@
                 Console.WriteLine("  " + seg.source + " -> " + seg.destination + " (coût : " + seg.cost + ")");
             }
         }
+        }
         
 
         // TODO : ajouter toutes les méthodes que vous jugerez pertinentes 
