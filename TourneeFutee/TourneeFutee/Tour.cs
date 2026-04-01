@@ -7,7 +7,7 @@
         private List<(string source, string destination, float cost)> _segments = new();
         // propriétés
 
-        // Coût total de la tournée
+        // Coût total de la tournée  
         public float Cost
         {
             get
@@ -52,5 +52,5 @@
 
         // TODO : ajouter toutes les méthodes que vous jugerez pertinentes 
 
-    }
+    
 }
