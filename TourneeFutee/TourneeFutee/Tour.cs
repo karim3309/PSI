@@ -1,13 +1,12 @@
-﻿namespace TourneeFutee
+﻿using System;
+using System.Collections.Generic;
+
+namespace TourneeFutee
 {
-    // Modélise une tournée dans le cadre du problème du voyageur de commerce
     public class Tour
     {
-        // TODO : ajouter tous les attributs que vous jugerez pertinents 
         private List<(string source, string destination, float cost)> _segments = new();
-        // propriétés
 
-        // Coût total de la tournée  
         public float Cost
         {
             get
@@ -19,26 +18,24 @@
             }
         }
 
-        // Nombre de trajets dans la tournée
         public int NbSegments
         {
-            get { return _segments.Count; }    // TODO : implémenter
+            get { return _segments.Count; }
         }
 
-
-        // Renvoie vrai si la tournée contient le trajet `source`->`destination`
         public bool ContainsSegment((string source, string destination) segment)
         {
             foreach (var seg in _segments)
                 if (seg.source == segment.source && seg.destination == segment.destination)
-                { 
                     return true;
-                }
-            return false;   
+            return false;
         }
 
+        public void AddSegment(string source, string destination, float cost)
+        {
+            _segments.Add((source, destination, cost));
+        }
 
-        // Affiche les informations sur la tournée : coût total et trajets
         public void Print()
         {
             Console.WriteLine("Coût total : " + Cost);
@@ -47,10 +44,5 @@
                 Console.WriteLine("  " + seg.source + " -> " + seg.destination + " (coût : " + seg.cost + ")");
             }
         }
-        }
-        
-
-        // TODO : ajouter toutes les méthodes que vous jugerez pertinentes 
-
-    
+    }
 }

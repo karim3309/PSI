@@ -7,6 +7,7 @@
         private Matrix matriceAdj;
         private bool directed;
         private float noEdgeValue;
+        public List<string> Nodes => new List<string>(vertexIndex.Keys);
 
         public Graph(bool directed, float noEdgeValue = 0)
         {

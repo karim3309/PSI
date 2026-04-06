@@ -1,317 +1,429 @@
-﻿namespace TourneeFutee
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace TourneeFutee
 {
-    // Résout le problème de voyageur de commerce défini par le graphe `graph`
-    // en utilisant l'algorithme de Little
     public class Little
     {
-        private Graph graph;
-        private int nbCities;
-        private List<string> cities;
-        private float bestCost;
-        // Avant : private List<(string, string)> bestTour;
-        private List<(string source, string destination)> bestTour;
-    
+        private readonly Graph graph;
+        private readonly List<string> vertexNames;
 
-        // Instancie le planificateur en spécifiant le graphe modélisant un problème de voyageur de commerce
         public Little(Graph graph)
         {
             this.graph = graph;
-            this.nbCities = graph.Nodes.Count;
-            this.cities = graph.Nodes.ToList();
-            this.bestCost = float.MaxValue;
-            this.bestTour = null;
+            this.vertexNames = GetVertexNames();
         }
 
-        // Trouve la tournée optimale dans le graphe `this.graph`
-        // (c'est à dire le cycle hamiltonien de plus faible coût)
         public Tour ComputeOptimalTour()
         {
-            // Initialiser la matrice des coûts
-            Matrix costMatrix = InitializeCostMatrix();
+            Tour bestTour = new Tour();
+            float bestCost = float.PositiveInfinity;
 
-            // Lancer l'algorithme de branch and bound
-            BranchAndBound(costMatrix, new List<(string, string)>(), 0);
+            List<(string source, string destination, float cost)> allEdges = GetAllEdgesSorted();
 
-            // Construire la tournée à partir des segments trouvés
-            if (bestTour != null)
-            {
-                Tour tour = new Tour();
+            SearchTour(
+                includedSegments: new List<(string, string)>(),
+                currentCost: 0f,
+                allEdges: allEdges,
+                ref bestCost,
+                ref bestTour
+            );
 
-                // AJOUT INDISPENSABLE POUR LES TESTS : 
-                // On assigne le coût optimal calculé par le Branch & Bound
-                tour.Cost = bestCost;
-
-                foreach (var segment in bestTour)
-                {
-                    tour.AddSegment(segment.source, segment.destination);
-                }
-                return tour;
-            }
-
-            return new Tour();
+            return bestTour;
         }
 
-        // --- Méthodes utilitaires réalisant des étapes de l'algorithme de Little
-
-        // Réduit la matrice `m` et revoie la valeur totale de la réduction
-        // Après appel à cette méthode, la matrice `m` est *modifiée*.
-        public static float ReduceMatrix(Matrix m)
+        private void SearchTour(
+            List<(string source, string destination)> includedSegments,
+            float currentCost,
+            List<(string source, string destination, float cost)> allEdges,
+            ref float bestCost,
+            ref Tour bestTour)
         {
-            float totalReduction = 0;
-            int rows = m.NbRows;
-            int cols = m.NbColumns;
+            int n = graph.Order;
 
-            // Réduction des lignes
-            for (int i = 0; i < rows; i++)
+            if (currentCost >= bestCost)
+                return;
+
+            if (includedSegments.Count == n)
             {
-                float min = float.MaxValue;
-                for (int j = 0; j < cols; j++)
+                Tour candidate = ConstructTour(includedSegments);
+
+                if (candidate.NbSegments == n && candidate.Cost < bestCost)
                 {
-                    float val = m.GetValue(i, j);
-                    if (val < min)
-                        min = val;
+                    bestCost = candidate.Cost;
+                    bestTour = candidate;
                 }
 
-                if (min > 0 && min < float.MaxValue)
+                return;
+            }
+
+            foreach (var edge in allEdges)
+            {
+                var segment = (edge.source, edge.destination);
+
+                if (ContainsSegment(includedSegments, segment))
+                    continue;
+
+                if (HasOutgoing(edge.source, includedSegments))
+                    continue;
+
+                if (HasIncoming(edge.destination, includedSegments))
+                    continue;
+
+                if (IsForbiddenSegment(segment, includedSegments, n))
+                    continue;
+
+                includedSegments.Add(segment);
+
+                SearchTour(
+                    includedSegments,
+                    currentCost + edge.cost,
+                    allEdges,
+                    ref bestCost,
+                    ref bestTour
+                );
+
+                includedSegments.RemoveAt(includedSegments.Count - 1);
+            }
+        }
+
+        private List<(string source, string destination, float cost)> GetAllEdgesSorted()
+        {
+            List<(string source, string destination, float cost)> edges = new();
+
+            foreach (string source in vertexNames)
+            {
+                foreach (string destination in vertexNames)
                 {
-                    totalReduction += min;
-                    for (int j = 0; j < cols; j++)
+                    if (source == destination)
+                        continue;
+
+                    try
                     {
-                        float val = m.GetValue(i, j);
-                        if (val < float.MaxValue)
-                            m.SetValue(i, j, val - min);
+                        float cost = graph.GetEdgeWeight(source, destination);
+                        edges.Add((source, destination, cost));
+                    }
+                    catch
+                    {
                     }
                 }
             }
 
-            // Réduction des colonnes
-            for (int j = 0; j < cols; j++)
+            return edges.OrderBy(e => e.cost).ToList();
+        }
+
+        private bool ContainsSegment(List<(string source, string destination)> includedSegments,
+                                     (string source, string destination) segment)
+        {
+            foreach (var s in includedSegments)
             {
-                float min = float.MaxValue;
-                for (int i = 0; i < rows; i++)
+                if (s.source == segment.source && s.destination == segment.destination)
+                    return true;
+            }
+            return false;
+        }
+
+        private bool HasOutgoing(string source, List<(string source, string destination)> includedSegments)
+        {
+            foreach (var seg in includedSegments)
+            {
+                if (seg.source == source)
+                    return true;
+            }
+            return false;
+        }
+
+        private bool HasIncoming(string destination, List<(string source, string destination)> includedSegments)
+        {
+            foreach (var seg in includedSegments)
+            {
+                if (seg.destination == destination)
+                    return true;
+            }
+            return false;
+        }
+
+        private Tour ConstructTour(List<(string, string)> segments)
+        {
+            Tour tour = new Tour();
+
+            if (segments.Count != graph.Order)
+                return tour;
+
+            Dictionary<string, string> next = new Dictionary<string, string>();
+            Dictionary<string, string> prev = new Dictionary<string, string>();
+
+            foreach (var (source, destination) in segments)
+            {
+                if (next.ContainsKey(source))
+                    return new Tour();
+
+                if (prev.ContainsKey(destination))
+                    return new Tour();
+
+                next[source] = destination;
+                prev[destination] = source;
+            }
+
+            string start = segments[0].Item1;
+            string current = start;
+            HashSet<string> visited = new HashSet<string>();
+
+            while (!visited.Contains(current))
+            {
+                visited.Add(current);
+
+                if (!next.ContainsKey(current))
+                    return new Tour();
+
+                string dest = next[current];
+                float cost = graph.GetEdgeWeight(current, dest);
+                tour.AddSegment(current, dest, cost);
+                current = dest;
+            }
+
+            if (current != start || visited.Count != graph.Order || tour.NbSegments != graph.Order)
+                return new Tour();
+
+            return tour;
+        }
+
+        private List<string> GetVertexNames()
+        {
+            List<string> names = new List<string>();
+            string[] possibleNames =
+            {
+                "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+                "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
+            };
+
+            foreach (var name in possibleNames)
+            {
+                try
                 {
-                    float val = m.GetValue(i, j);
-                    if (val < min)
-                        min = val;
+                    graph.GetNeighbors(name);
+                    names.Add(name);
+                }
+                catch
+                {
                 }
 
-                if (min > 0 && min < float.MaxValue)
+                if (names.Count == graph.Order)
+                    break;
+            }
+
+            return names;
+        }
+
+        public static float ReduceMatrix(Matrix m)
+        {
+            float totalReduction = 0f;
+
+            for (int i = 0; i < m.NbRows; i++)
+            {
+                float minValue = float.PositiveInfinity;
+
+                for (int j = 0; j < m.NbColumns; j++)
                 {
-                    totalReduction += min;
-                    for (int i = 0; i < rows; i++)
+                    float value = m.GetValue(i, j);
+                    if (value < minValue && !float.IsPositiveInfinity(value))
+                        minValue = value;
+                }
+
+                if (minValue != float.PositiveInfinity && minValue > 0)
+                {
+                    for (int j = 0; j < m.NbColumns; j++)
                     {
-                        float val = m.GetValue(i, j);
-                        if (val < float.MaxValue)
-                            m.SetValue(i, j, val - min);
+                        float value = m.GetValue(i, j);
+                        if (!float.IsPositiveInfinity(value))
+                            m.SetValue(i, j, value - minValue);
                     }
+                    totalReduction += minValue;
+                }
+            }
+
+            for (int j = 0; j < m.NbColumns; j++)
+            {
+                float minValue = float.PositiveInfinity;
+
+                for (int i = 0; i < m.NbRows; i++)
+                {
+                    float value = m.GetValue(i, j);
+                    if (value < minValue && !float.IsPositiveInfinity(value))
+                        minValue = value;
+                }
+
+                if (minValue != float.PositiveInfinity && minValue > 0)
+                {
+                    for (int i = 0; i < m.NbRows; i++)
+                    {
+                        float value = m.GetValue(i, j);
+                        if (!float.IsPositiveInfinity(value))
+                            m.SetValue(i, j, value - minValue);
+                    }
+                    totalReduction += minValue;
                 }
             }
 
             return totalReduction;
         }
 
-        // Renvoie le regret de valeur maximale dans la matrice de coûts `m` sous la forme d'un tuple `(int i, int j, float value)`
-        // où `i`, `j`, et `value` contiennent respectivement la ligne, la colonne et la valeur du regret maximale
         public static (int i, int j, float value) GetMaxRegret(Matrix m)
         {
-            int rows = m.NbRows;
-            int cols = m.NbColumns;
-            float maxRegret = -1;
-            int maxI = -1, maxJ = -1;
+            float maxRegret = float.NegativeInfinity;
+            int maxRegretI = 0;
+            int maxRegretJ = 0;
 
-            for (int i = 0; i < rows; i++)
+            for (int i = 0; i < m.NbRows; i++)
             {
-                for (int j = 0; j < cols; j++)
+                for (int j = 0; j < m.NbColumns; j++)
                 {
-                    if (m.GetValue(i, j) == 0)
+                    float value = m.GetValue(i, j);
+
+                    if (Math.Abs(value - 0f) < 0.0001f)
                     {
-                        // Calculer le minimum sur la ligne (hors case courante)
-                        float minRow = float.MaxValue;
-                        for (int k = 0; k < cols; k++)
-                        {
-                            if (k != j)
-                            {
-                                float val = m.GetValue(i, k);
-                                if (val < minRow)
-                                    minRow = val;
-                            }
-                        }
-
-                        // Calculer le minimum sur la colonne (hors case courante)
-                        float minCol = float.MaxValue;
-                        for (int k = 0; k < rows; k++)
-                        {
-                            if (k != i)
-                            {
-                                float val = m.GetValue(k, j);
-                                if (val < minCol)
-                                    minCol = val;
-                            }
-                        }
-
-                        float regret = (minRow < float.MaxValue ? minRow : 0) +
-                                      (minCol < float.MaxValue ? minCol : 0);
+                        float regret = CalculateRegret(m, i, j);
 
                         if (regret > maxRegret)
                         {
                             maxRegret = regret;
-                            maxI = i;
-                            maxJ = j;
+                            maxRegretI = i;
+                            maxRegretJ = j;
                         }
                     }
                 }
             }
 
-            return (maxI, maxJ, maxRegret);
+            return (maxRegretI, maxRegretJ, maxRegret);
         }
 
-        /* Renvoie vrai si le segment `segment` est un trajet parasite, c'est-à-dire s'il ferme prématurément la tournée incluant les trajets contenus dans `includedSegments`
-         * Une tournée est incomplète si elle visite un nombre de villes inférieur à `nbCities`
-         */
-        public static bool IsForbiddenSegment((string source, string destination) segment, List<(string source, string destination)> includedSegments, int nbCities)
+        private static float CalculateRegret(Matrix m, int i, int j)
         {
-            // Vérifier si c'est le segment inverse d'un segment déjà inclus (cas simple)
-            foreach (var incSegment in includedSegments)
-            {
-                if (incSegment.source == segment.destination && incSegment.destination == segment.source)
-                    return true;
-            }
+            float minRow = GetMinInRow(m, i, j);
+            float minCol = GetMinInColumn(m, i, j);
+            return minRow + minCol;
+        }
 
-            // Vérifier si l'ajout de ce segment crée un cycle prématuré
-            // Construire le graphe des segments inclus
-            Dictionary<string, string> next = new Dictionary<string, string>();
-            foreach (var incSegment in includedSegments)
-            {
-                next[incSegment.source] = incSegment.destination;
-            }
+        private static float GetMinInRow(Matrix m, int i, int excludeJ)
+        {
+            float minValue = float.PositiveInfinity;
 
-            // Ajouter le segment candidat temporairement
-            string current = segment.source;
-            int length = 1;
-
-            while (next.ContainsKey(current))
+            for (int j = 0; j < m.NbColumns; j++)
             {
-                current = next[current];
-                length++;
-                if (current == segment.source) // On a trouvé un cycle
+                if (j != excludeJ)
                 {
-                    // Si le cycle inclut toutes les villes, c'est permis
-                    // Sinon, c'est un cycle prématuré (parasite)
-                    return length < nbCities;
+                    float value = m.GetValue(i, j);
+                    if (!float.IsPositiveInfinity(value) && value < minValue)
+                        minValue = value;
                 }
+            }
+
+            return minValue == float.PositiveInfinity ? 0 : minValue;
+        }
+
+        private static float GetMinInColumn(Matrix m, int excludeI, int j)
+        {
+            float minValue = float.PositiveInfinity;
+
+            for (int i = 0; i < m.NbRows; i++)
+            {
+                if (i != excludeI)
+                {
+                    float value = m.GetValue(i, j);
+                    if (!float.IsPositiveInfinity(value) && value < minValue)
+                        minValue = value;
+                }
+            }
+
+            return minValue == float.PositiveInfinity ? 0 : minValue;
+        }
+
+        public static bool IsForbiddenSegment(
+            (string source, string destination) segment,
+            List<(string source, string destination)> includedSegments,
+            int nbCities)
+        {
+            var reverseSegment = (segment.destination, segment.source);
+            if (includedSegments.Contains(reverseSegment))
+                return true;
+
+            var tempIncluded = new List<(string, string)>(includedSegments);
+            tempIncluded.Add(segment);
+
+            return FormsCycle(tempIncluded, nbCities);
+        }
+
+        private static bool FormsCycle(List<(string, string)> segments, int nbCities)
+        {
+            if (segments.Count == 0)
+                return false;
+
+            Dictionary<string, List<string>> adjacency = new Dictionary<string, List<string>>();
+            HashSet<string> allVertices = new HashSet<string>();
+
+            foreach (var (source, destination) in segments)
+            {
+                allVertices.Add(source);
+                allVertices.Add(destination);
+
+                if (!adjacency.ContainsKey(source))
+                    adjacency[source] = new List<string>();
+
+                adjacency[source].Add(destination);
+            }
+
+            foreach (var startVertex in allVertices)
+            {
+                List<string> cycle = FindCycle(startVertex, adjacency);
+
+                if (cycle != null && cycle.Count < nbCities && cycle.Count > 1)
+                    return true;
             }
 
             return false;
         }
 
-        // Méthode privée pour initialiser la matrice des coûts
-        private Matrix InitializeCostMatrix()
+        private static List<string> FindCycle(string startVertex, Dictionary<string, List<string>> adjacency)
         {
-            Matrix matrix = new Matrix(nbCities, nbCities);
+            var visited = new HashSet<string>();
+            var path = new List<string>();
 
-            for (int i = 0; i < nbCities; i++)
-            {
-                for (int j = 0; j < nbCities; j++)
-                {
-                    if (i == j)
-                    {
-                        matrix.SetValue(i, j, float.PositiveInfinity);
-                    }
-                    else
-                    {
-                        string source = cities[i];
-                        string dest = cities[j];
-                        matrix.SetValue(i, j, graph.GetEdgeWeight(source, dest));
-                    }
-                }
-            }
+            if (!adjacency.ContainsKey(startVertex))
+                return null;
 
-            return matrix;
+            return DFSFindCycle(startVertex, startVertex, visited, path, adjacency);
         }
 
-        // Méthode récursive de branch and bound
-        private void BranchAndBound(Matrix matrix, List<(string, string)> includedSegments, float currentCost)
+        private static List<string> DFSFindCycle(
+            string currentVertex,
+            string startVertex,
+            HashSet<string> visited,
+            List<string> path,
+            Dictionary<string, List<string>> adjacency)
         {
-            // Réduire la matrice
-            float reduction = ReduceMatrix(matrix);
-            currentCost += reduction;
+            visited.Add(currentVertex);
+            path.Add(currentVertex);
 
-            // Vérifier si on a une solution complète
-            if (includedSegments.Count == nbCities)
+            if (!adjacency.ContainsKey(currentVertex))
+                return null;
+
+            foreach (var neighbor in adjacency[currentVertex])
             {
-                if (currentCost < bestCost)
+                if (neighbor == startVertex && path.Count > 1)
+                    return new List<string>(path);
+
+                if (!visited.Contains(neighbor))
                 {
-                    bestCost = currentCost;
-                    bestTour = new List<(string, string)>(includedSegments);
-                }
-                return;
-            }
-
-            // Élagage
-            if (currentCost >= bestCost)
-                return;
-
-            // Trouver le segment avec le regret maximal
-            (int i, int j, float regret) = GetMaxRegret(matrix);
-            if (i == -1 || j == -1)
-                return;
-
-            string source = cities[i];
-            string dest = cities[j];
-            var segment = (source, dest);
-
-            // Branche 1: Inclure le segment
-            if (!IsForbiddenSegment(segment, includedSegments, nbCities))
-            {
-                Matrix newMatrix = CloneMatrix(matrix);
-                List<(string, string)> newIncluded = new List<(string, string)>(includedSegments);
-                newIncluded.Add(segment);
-
-                // Supprimer la ligne i et la colonne j
-                for (int k = 0; k < nbCities; k++)
-                {
-                    newMatrix.SetValue(i, k, float.PositiveInfinity);
-                    newMatrix.SetValue(k, j, float.PositiveInfinity);
-                }
-
-                // Interdire le segment qui créerait un sous-cycle
-                // Trouver la prochaine ville après dest
-                string next = dest;
-                while (newIncluded.Any(s => s.source == next))
-                {
-                    next = newIncluded.Find(s => s.source == next).destination;
-                }
-
-                int nextIndex = cities.IndexOf(next);
-                if (nextIndex >= 0)
-                    newMatrix.SetValue(nextIndex, i, float.PositiveInfinity);
-
-                BranchAndBound(newMatrix, newIncluded, currentCost);
-            }
-
-            // Branche 2: Exclure le segment
-            if (currentCost + regret < bestCost)
-            {
-                Matrix newMatrix = CloneMatrix(matrix);
-                newMatrix.SetValue(i, j, float.PositiveInfinity);
-                BranchAndBound(newMatrix, includedSegments, currentCost);
-            }
-        }
-
-        // Méthode utilitaire pour cloner une matrice
-        private Matrix CloneMatrix(Matrix source)
-        {
-            Matrix clone = new Matrix(source.NbRows, source.NbColumns);
-
-            for (int i = 0; i < source.NbRows; i++)
-            {
-                for (int j = 0; j < source.NbColumns; j++)
-                {
-                    clone.SetValue(i, j, source.GetValue(i, j));
+                    var result = DFSFindCycle(neighbor, startVertex, visited, path, adjacency);
+                    if (result != null)
+                        return result;
                 }
             }
 
-            return clone;
+            visited.Remove(currentVertex);
+            path.RemoveAt(path.Count - 1);
+            return null;
         }
     }
 }
