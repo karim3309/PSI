@@ -65,10 +65,10 @@ namespace TourneeFutee
                 if (ContainsSegment(includedSegments, segment))
                     continue;
 
-                if (HasOutgoing(edge.source, includedSegments))
+                if (ADejaUnDepartDepuis(edge.source, includedSegments))
                     continue;
 
-                if (HasIncoming(edge.destination, includedSegments))
+                if (ADejaUneArriveeVers(edge.destination, includedSegments))
                     continue;
 
                 if (IsForbiddenSegment(segment, includedSegments, n))
@@ -124,7 +124,7 @@ namespace TourneeFutee
             return false;
         }
 
-        private bool HasOutgoing(string source, List<(string source, string destination)> includedSegments)
+        private bool ADejaUnDepartDepuis(string source, List<(string source, string destination)> includedSegments)
         {
             foreach (var seg in includedSegments)
             {
@@ -134,7 +134,7 @@ namespace TourneeFutee
             return false;
         }
 
-        private bool HasIncoming(string destination, List<(string source, string destination)> includedSegments)
+        private bool ADejaUneArriveeVers(string destination, List<(string source, string destination)> includedSegments)
         {
             foreach (var seg in includedSegments)
             {
@@ -265,7 +265,6 @@ namespace TourneeFutee
                     totalReduction += minValue;
                 }
             }
-
             return totalReduction;
         }
 
@@ -392,10 +391,10 @@ namespace TourneeFutee
             if (!adjacency.ContainsKey(startVertex))
                 return null;
 
-            return DFSFindCycle(startVertex, startVertex, visited, path, adjacency);
+            return ChercherCycleEnProfondeur(startVertex, startVertex, visited, path, adjacency);
         }
 
-        private static List<string> DFSFindCycle(
+        private static List<string> ChercherCycleEnProfondeur(
             string currentVertex,
             string startVertex,
             HashSet<string> visited,
@@ -415,7 +414,7 @@ namespace TourneeFutee
 
                 if (!visited.Contains(neighbor))
                 {
-                    var result = DFSFindCycle(neighbor, startVertex, visited, path, adjacency);
+                    var result = ChercherCycleEnProfondeur(neighbor, startVertex, visited, path, adjacency);
                     if (result != null)
                         return result;
                 }
