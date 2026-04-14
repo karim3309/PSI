@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace TourneeFutee
+﻿namespace TourneeFutee
 {
     public class Graph
     {
@@ -10,43 +7,32 @@ namespace TourneeFutee
         private Matrix matriceAdj;
         private bool directed;
         private float noEdgeValue;
-
         public List<string> Nodes => new List<string>(vertexIndex.Keys);
 
-        // Compatible avec : new Graph(isOriented: true)
-        public Graph(bool isOriented, float noEdgeValue = 0)
+        public Graph(bool directed, float noEdgeValue = 0)
         {
-            this.directed = isOriented;
+            this.directed = directed;
             this.noEdgeValue = noEdgeValue;
             vertexIndex = new Dictionary<string, int>();
             vertexValues = new Dictionary<string, float>();
             matriceAdj = new Matrix(0, 0, noEdgeValue);
         }
-
-        // Alias attendu par les tests
-        public int VertexCount => vertexIndex.Count;
-
-        // Alias attendu par les tests
-        public bool IsOriented => directed;
-
-        // Tu peux garder les anciens noms si d'autres classes les utilisent
+        // L'ordre, c'est juste le nombre de sommets qu'on a en stock
         public int Order => vertexIndex.Count;
-        public bool Directed => directed;
 
-        public bool ContainsVertex(string name)
-        {
-            return vertexIndex.ContainsKey(name);
-        }
+        public bool Directed => directed;
 
         public void AddVertex(string name, float value = 0)
         {
             if (vertexIndex.ContainsKey(name))
                 throw new ArgumentException();
 
+            // L'index du nouveau sommet sera le nombre actuel de sommets
             int newIndex = vertexIndex.Count;
             vertexIndex.Add(name, newIndex);
             vertexValues.Add(name, value);
 
+            // On agrandit la matrice d'adjacence
             matriceAdj.AddRow(newIndex);
             matriceAdj.AddColumn(newIndex);
         }
@@ -57,17 +43,21 @@ namespace TourneeFutee
                 throw new ArgumentException();
 
             int indexToRemove = vertexIndex[name];
+            // On nettoie les dicos
             vertexIndex.Remove(name);
             vertexValues.Remove(name);
-
+            // On retire la ligne et la colonne dans la matrice
             matriceAdj.RemoveRow(indexToRemove);
             matriceAdj.RemoveColumn(indexToRemove);
 
+            // Mise à jour des index des sommets restants (car la matrice a glissé)
             List<string> keys = new List<string>(vertexIndex.Keys);
             foreach (var k in keys)
             {
                 if (vertexIndex[k] > indexToRemove)
+                {
                     vertexIndex[k]--;
+                }
             }
         }
 
@@ -83,6 +73,7 @@ namespace TourneeFutee
             if (!vertexValues.ContainsKey(name))
                 throw new ArgumentException();
             vertexValues[name] = value;
+
         }
 
         public List<string> GetNeighbors(string vertexName)
@@ -92,14 +83,15 @@ namespace TourneeFutee
 
             List<string> neighborNames = new List<string>();
             int i = vertexIndex[vertexName];
-
+            // On parcourt la ligne du sommet dans la matrice pour voir avec qui il est lié
             foreach (var kvp in vertexIndex)
             {
                 int j = kvp.Value;
                 if (matriceAdj.GetValue(i, j) != noEdgeValue)
+                {
                     neighborNames.Add(kvp.Key);
+                }
             }
-
             return neighborNames;
         }
 
@@ -111,9 +103,11 @@ namespace TourneeFutee
             int source = vertexIndex[sourceName];
             int dest = vertexIndex[destinationName];
 
+            // Vérification si l'arc existe déjà
             if (matriceAdj.GetValue(source, dest) != noEdgeValue)
                 throw new ArgumentException();
 
+            // Cas particulier du graphe non-orienté : l'arc (B,A) est le même que (A,B) 
             if (!directed && source != dest && matriceAdj.GetValue(dest, source) != noEdgeValue)
                 throw new ArgumentException();
 
@@ -129,10 +123,10 @@ namespace TourneeFutee
 
             int source = vertexIndex[sourceName];
             int dest = vertexIndex[destinationName];
-
+            // On ne veut pas écraser un arc existant par erreur
             if (matriceAdj.GetValue(source, dest) == noEdgeValue)
                 throw new ArgumentException();
-
+            // Si c'est un graphe non-orienté, on fait l'aller-retour automatiquement
             matriceAdj.SetValue(source, dest, noEdgeValue);
             if (!directed)
                 matriceAdj.SetValue(dest, source, noEdgeValue);
@@ -163,7 +157,9 @@ namespace TourneeFutee
 
             matriceAdj.SetValue(source, dest, weight);
             if (!directed)
+            {
                 matriceAdj.SetValue(dest, source, weight);
+            }
         }
     }
 }
