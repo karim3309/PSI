@@ -158,14 +158,15 @@ namespace TourneeFutee.Tests
 
             // Vérifier le nombre de sommets
             Assert.AreEqual(
-                original.VertexCount, loaded.VertexCount,
+                // FIX : VertexCount->Order
+                original.Order, loaded.Order,
                 "Le nombre de sommets doit être identique après rechargement.");
 
             // Vérifier que les sommets ont les mêmes noms et valeurs
             foreach (string name in new[] { "X", "Y", "Z" })
             {
-                // FIX : Graph n'a pas de ContainsVertex — on tente GetVertexValue
-                Assert.IsTrue(loaded.GetVertexValue(name),
+               
+                Assert.IsTrue(loaded.ContainsVertex(name),
                     $"Le sommet '{name}' doit exister dans le graphe rechargé.");
                 Assert.AreEqual(
                     original.GetVertexValue(name), loaded.GetVertexValue(name), 0.001f,
@@ -179,8 +180,8 @@ namespace TourneeFutee.Tests
 
             // Vérifier que le graphe rechargé est non orienté
             // FIX : IsOriented -> Directed
-            Assert.AreEqual(original.directed, loaded.directed,
-                "La propriété directed doit être identique.");
+            Assert.AreEqual(original.Directed, loaded.Directed,
+                "La propriété Directed doit être identique.");
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -208,7 +209,7 @@ namespace TourneeFutee.Tests
             Assert.AreEqual(2f,  loaded.GetEdgeWeight("E", "D"), 0.001f, "Poids E->D incorrect.");
             Assert.AreEqual(4f,  loaded.GetEdgeWeight("E", "F"), 0.001f, "Poids E->F incorrect.");
 
-            Assert.IsTrue(loaded.directed,
+            Assert.IsTrue(loaded.Directed,
                 "Le graphe rechargé doit être orienté.");
         }
 
