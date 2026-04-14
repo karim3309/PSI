@@ -33,56 +33,19 @@
             return vertexIndex.ContainsKey(name);
         }
 
-        // AJOUT : Surcharge de GetVertexValue qui retourne un bool
-        // Cela permet à Assert.IsTrue(loaded.GetVertexValue(name)) de fonctionner
-        public bool GetVertexValue(string name, out float value)
+        // Méthode originale qui lève une exception si le sommet n'existe pas
+        // (comportement attendu par GraphTests)
+        public float GetVertexValue(string name)
         {
-            if (vertexValues.TryGetValue(name, out value))
-            {
-                return true;
-            }
-            value = 0f;
-            return false;
-        }
-
-        // AJOUT : Opérateur implicite pour convertir GetVertexValue en bool
-        // Cela permet à Assert.IsTrue(loaded.GetVertexValue(name)) de fonctionner
-        public class VertexValueResult
-        {
-            private float _value;
-            private bool _exists;
-
-            public VertexValueResult(float value, bool exists)
-            {
-                _value = value;
-                _exists = exists;
-            }
-
-            public static implicit operator bool(VertexValueResult result)
-            {
-                return result._exists;
-            }
-
-            public static implicit operator float(VertexValueResult result)
-            {
-                return result._value;
-            }
-        }
-
-        // Remplace l'ancienne méthode GetVertexValue
-        public VertexValueResult GetVertexValue(string name)
-        {
-            if (vertexValues.TryGetValue(name, out float value))
-            {
-                return new VertexValueResult(value, true);
-            }
-            return new VertexValueResult(0f, false);
+            if (!vertexValues.ContainsKey(name))
+                throw new ArgumentException($"Le sommet '{name}' n'existe pas.", nameof(name));
+            return vertexValues[name];
         }
 
         public void AddVertex(string name, float value = 0)
         {
             if (vertexIndex.ContainsKey(name))
-                throw new ArgumentException();
+                throw new ArgumentException($"Le sommet '{name}' existe déjà.", nameof(name));
 
             int newIndex = vertexIndex.Count;
             vertexIndex.Add(name, newIndex);
@@ -95,7 +58,7 @@
         public void RemoveVertex(string name)
         {
             if (!vertexIndex.ContainsKey(name))
-                throw new ArgumentException();
+                throw new ArgumentException($"Le sommet '{name}' n'existe pas.", nameof(name));
 
             int indexToRemove = vertexIndex[name];
             vertexIndex.Remove(name);
@@ -113,25 +76,17 @@
             }
         }
 
-        // Ancienne méthode renommée pour usage interne ou quand on veut la valeur directement
-        public float GetVertexValueFloat(string name)
-        {
-            if (!vertexValues.ContainsKey(name))
-                throw new ArgumentException();
-            return vertexValues[name];
-        }
-
         public void SetVertexValue(string name, float value)
         {
             if (!vertexValues.ContainsKey(name))
-                throw new ArgumentException();
+                throw new ArgumentException($"Le sommet '{name}' n'existe pas.", nameof(name));
             vertexValues[name] = value;
         }
 
         public List<string> GetNeighbors(string vertexName)
         {
             if (!vertexIndex.ContainsKey(vertexName))
-                throw new ArgumentException();
+                throw new ArgumentException($"Le sommet '{vertexName}' n'existe pas.", nameof(vertexName));
 
             List<string> neighborNames = new List<string>();
             int i = vertexIndex[vertexName];
@@ -148,17 +103,19 @@
 
         public void AddEdge(string sourceName, string destinationName, float weight = 1)
         {
-            if (!vertexIndex.ContainsKey(sourceName) || !vertexIndex.ContainsKey(destinationName))
-                throw new ArgumentException();
+            if (!vertexIndex.ContainsKey(sourceName))
+                throw new ArgumentException($"Le sommet source '{sourceName}' n'existe pas.", nameof(sourceName));
+            if (!vertexIndex.ContainsKey(destinationName))
+                throw new ArgumentException($"Le sommet destination '{destinationName}' n'existe pas.", nameof(destinationName));
 
             int source = vertexIndex[sourceName];
             int dest = vertexIndex[destinationName];
 
             if (matriceAdj.GetValue(source, dest) != noEdgeValue)
-                throw new ArgumentException();
+                throw new ArgumentException($"L'arc de '{sourceName}' vers '{destinationName}' existe déjà.");
 
             if (!_directed && source != dest && matriceAdj.GetValue(dest, source) != noEdgeValue)
-                throw new ArgumentException();
+                throw new ArgumentException($"L'arc entre '{sourceName}' et '{destinationName}' existe déjà.");
 
             matriceAdj.SetValue(source, dest, weight);
             if (!_directed)
@@ -167,13 +124,16 @@
 
         public void RemoveEdge(string sourceName, string destinationName)
         {
-            if (!vertexIndex.ContainsKey(sourceName) || !vertexIndex.ContainsKey(destinationName))
-                throw new ArgumentException();
+            if (!vertexIndex.ContainsKey(sourceName))
+                throw new ArgumentException($"Le sommet source '{sourceName}' n'existe pas.", nameof(sourceName));
+            if (!vertexIndex.ContainsKey(destinationName))
+                throw new ArgumentException($"Le sommet destination '{destinationName}' n'existe pas.", nameof(destinationName));
 
             int source = vertexIndex[sourceName];
             int dest = vertexIndex[destinationName];
+
             if (matriceAdj.GetValue(source, dest) == noEdgeValue)
-                throw new ArgumentException();
+                throw new ArgumentException($"L'arc de '{sourceName}' vers '{destinationName}' n'existe pas.");
 
             matriceAdj.SetValue(source, dest, noEdgeValue);
             if (!_directed)
@@ -182,26 +142,33 @@
 
         public float GetEdgeWeight(string sourceName, string destinationName)
         {
-            if (!vertexIndex.ContainsKey(sourceName) || !vertexIndex.ContainsKey(destinationName))
-                throw new ArgumentException();
+            if (!vertexIndex.ContainsKey(sourceName))
+                throw new ArgumentException($"Le sommet source '{sourceName}' n'existe pas.", nameof(sourceName));
+            if (!vertexIndex.ContainsKey(destinationName))
+                throw new ArgumentException($"Le sommet destination '{destinationName}' n'existe pas.", nameof(destinationName));
 
             int source = vertexIndex[sourceName];
             int dest = vertexIndex[destinationName];
 
             float weight = matriceAdj.GetValue(source, dest);
             if (weight == noEdgeValue)
-                throw new ArgumentException();
+                throw new ArgumentException($"Aucun arc n'existe entre '{sourceName}' et '{destinationName}'.");
 
             return weight;
         }
 
         public void SetEdgeWeight(string sourceName, string destinationName, float weight)
         {
-            if (!vertexIndex.ContainsKey(sourceName) || !vertexIndex.ContainsKey(destinationName))
-                throw new ArgumentException("Sommet introuvable.");
+            if (!vertexIndex.ContainsKey(sourceName))
+                throw new ArgumentException("Sommet source introuvable.", nameof(sourceName));
+            if (!vertexIndex.ContainsKey(destinationName))
+                throw new ArgumentException("Sommet destination introuvable.", nameof(destinationName));
 
             int source = vertexIndex[sourceName];
             int dest = vertexIndex[destinationName];
+
+            if (matriceAdj.GetValue(source, dest) == noEdgeValue)
+                throw new ArgumentException($"L'arc de '{sourceName}' vers '{destinationName}' n'existe pas.");
 
             matriceAdj.SetValue(source, dest, weight);
             if (!_directed)
