@@ -5,44 +5,20 @@ namespace TourneeFutee
 {
     public class Tour
     {
-        private List<(string source, string destination, float cost)> _segments = new();
+        private readonly List<string> _vertices;
+        private readonly float _totalCost;
 
-        public float Cost
+        public Tour(List<string> vertices, float totalCost)
         {
-            get
-            {
-                float total = 0f;
-                foreach (var seg in _segments)
-                    total += seg.cost;
-                return total;
-            }
+            if (vertices == null)
+                throw new ArgumentNullException(nameof(vertices));
+
+            _vertices = new List<string>(vertices);
+            _totalCost = totalCost;
         }
 
-        public int NbSegments
-        {
-            get { return _segments.Count; }
-        }
+        public IList<string> Vertices => _vertices.AsReadOnly();
 
-        public bool ContainsSegment((string source, string destination) segment)
-        {
-            foreach (var seg in _segments)
-                if (seg.source == segment.source && seg.destination == segment.destination)
-                    return true;
-            return false;
-        }
-
-        public void AddSegment(string source, string destination, float cost)
-        {
-            _segments.Add((source, destination, cost));
-        }
-
-        public void Print()
-        {
-            Console.WriteLine("Coût total : " + Cost);
-            foreach (var seg in _segments)
-            {
-                Console.WriteLine("  " + seg.source + " -> " + seg.destination + " (coût : " + seg.cost + ")");
-            }
-        }
+        public float TotalCost => _totalCost;
     }
 }
