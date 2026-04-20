@@ -115,7 +115,80 @@ namespace TourneeFutee
             }
         }
 
-       
+        public uint SaveTour(uint graphId, Tour t)
+        {
+            using (var conn = OpenConnection())
+            {
+                uint tourId;
+                using (var cmd = new MySqlCommand("INSERT INTO Tournee(cout_total, graphe_id) VALUES (@cout, @gid); SELECT LAST_INSERT_ID();", conn))
+                {
+                    cmd.Parameters.AddWithValue("@cout", t.Cost);
+                    cmd.Parameters.AddWithValue("@gid", graphId);
+                    tourId = Convert.ToUInt32(cmd.ExecuteScalar());
+                }
+
+                var nomToDbId = new Dictionary<string, uint>();
+                using (var cmd = new MySqlCommand("SELECT id, nom FROM Sommet WHERE graphe_id = @gid ORDER BY id ASC;", conn))
+                {
+                    cmd.Parameters.AddWithValue("@gid", graphId);
+                    using (var reader = cmd.ExecuteReader())
+                        while (reader.Read())
+                            nomToDbId[reader["nom"].ToString()] = Convert.ToUInt32(reader["id"]);
+                }
+
+                string sqlEtape = "INSERT INTO EtapeTournee(tournee_id, numero_ordre, sommet_id) VALUES (@tid, @ordre, @sid);";
+                for (int ordre = 0; ordre < t.Vertices.Count; ordre++)
+                {
+                    using (var cmd = new MySqlCommand(sqlEtape, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@tid", tourId);
+                        cmd.Parameters.AddWithValue("@ordre", ordre);
+                        cmd.Parameters.AddWithValue("@sid", nomToDbId[t.Vertices[ordre]]);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return tourId;
+            }
+        }
+
+        public Tour LoadTour(uint id)
+        {
+            using (var conn = OpenConnection())
+            {
+                float coutTotal;
+                uint graphId;
+                using (var cmd = new MySqlCommand("SELECT cout_total, graphe_id FROM Tournee WHERE id = @id;", conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read()) throw new Exception($"Tournée {id} introuvable.");
+                        coutTotal = reader.GetFloat("cout_total");
+                        graphId = Convert.ToUInt32(reader["graphe_id"]);
+                    }
+                }
+
+                var sommetIdToNom = new Dictionary<uint, string>();
+                using (var cmd = new MySqlCommand("SELECT id, nom FROM Sommet WHERE graphe_id = @gid ORDER BY id ASC;", conn))
+                {
+                    cmd.Parameters.AddWithValue("@gid", graphId);
+                    using (var reader = cmd.ExecuteReader())
+                        while (reader.Read())
+                            sommetIdToNom[Convert.ToUInt32(reader["id"])] = reader["nom"].ToString();
+                }
+
+                var sequence = new List<string>();
+                using (var cmd = new MySqlCommand("SELECT sommet_id FROM EtapeTournee WHERE tournee_id = @tid ORDER BY numero_ordre ASC;", conn))
+                {
+                    cmd.Parameters.AddWithValue("@tid", id);
+                    using (var reader = cmd.ExecuteReader())
+                        while (reader.Read())
+                            sequence.Add(sommetIdToNom[Convert.ToUInt32(reader["sommet_id"])]);
+                }
+
+                return new Tour(sequence, coutTotal);
+            }
+        }
 
 
         private MySqlConnection OpenConnection()
