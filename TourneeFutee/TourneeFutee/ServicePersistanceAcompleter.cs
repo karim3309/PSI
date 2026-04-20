@@ -62,8 +62,61 @@ namespace TourneeFutee
                 return graphId;
             }
         }
+        public Graph LoadGraph(uint id)
+        {
+            using (var conn = OpenConnection())
+            {
+                bool estOriente;
+                using (var cmd = new MySqlCommand("SELECT est_oriente FROM Graphe WHERE id = @id;", conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read()) throw new Exception($"Graphe {id} introuvable.");
+                        estOriente = reader.GetBoolean("est_oriente");
+                    }
+                }
 
-        
+                var sommetIdToNom = new Dictionary<uint, string>();
+                var sommetNomToValeur = new Dictionary<string, float>();
+                using (var cmd = new MySqlCommand("SELECT id, nom, valeur FROM Sommet WHERE graphe_id = @gid ORDER BY id ASC;", conn))
+                {
+                    cmd.Parameters.AddWithValue("@gid", id);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            uint sid = Convert.ToUInt32(reader["id"]);
+                            string nom = reader["nom"].ToString();
+                            sommetIdToNom[sid] = nom;
+                            sommetNomToValeur[nom] = reader.GetFloat("valeur");
+                        }
+                    }
+                }
+
+                var graph = new Graph(estOriente, noEdgeValue: 0);
+                foreach (string nom in sommetIdToNom.Values)
+                    graph.AddVertex(nom, sommetNomToValeur[nom]);
+
+                using (var cmd = new MySqlCommand("SELECT sommet_source_id, sommet_dest_id, poids FROM Arc WHERE graphe_id = @gid;", conn))
+                {
+                    cmd.Parameters.AddWithValue("@gid", id);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string srcNom = sommetIdToNom[Convert.ToUInt32(reader["sommet_source_id"])];
+                            string dstNom = sommetIdToNom[Convert.ToUInt32(reader["sommet_dest_id"])];
+                            graph.AddEdge(srcNom, dstNom, reader.GetFloat("poids"));
+                        }
+                    }
+                }
+                return graph;
+            }
+        }
+
+       
+
 
         private MySqlConnection OpenConnection()
         {
