@@ -9,7 +9,8 @@
 --
 -- TODO : compléter les parties marquées "TODO" ci-dessous.
 -- =============================================================================
-
+Create database if not exists tourneefutee_test;
+use tourneefutee_test;
 -- Supprimer les tables dans l'ordre inverse des dépendances (pour réinitialiser)
 DROP TABLE IF EXISTS EtapeTournee;
 DROP TABLE IF EXISTS Tournee;

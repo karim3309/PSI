@@ -4,11 +4,16 @@ using MySql.Data.MySqlClient;
 
 namespace TourneeFutee
 {
+
     public class ServicePersistance
     {
         private readonly string _connectionString;
+        private const string DB_SERVER = "127.0.0.1";
+        private const string DB_NAME = "tourneefutee_test";
+        private const string DB_USER = "root";
+        private const string DB_PWD = "root";
 
-        public ServicePersistance(string serverIp, string dbname, string user, string pwd)
+        public ServicePersistance(string serverIp = DB_SERVER, string dbname = DB_NAME, string user = DB_USER, string pwd = DB_PWD)
         {
             _connectionString = $"server={serverIp};database={dbname};uid={user};pwd={pwd};";
             using (var conn = OpenConnection()) { }
